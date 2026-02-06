@@ -78,6 +78,54 @@ func minmax(a []float64) (min, max float64) {
 	return
 }
 
+func addNoise(x []float64, noiseAmp float64) (xNoisy []float64) {
+	N := len(x)
+	xNoisy = make([]float64, N)
+	for n := 0; n < N; n++ {
+		noise := (rand.Float64()*2 - 1) * noiseAmp
+		xNoisy[n] = x[n] + noise
+	}
+	return
+}
+
+func maxAbsError(a []float64, b []float64) float64 {
+	N := len(a)
+	max := 0.0
+	for n := 0; n < N; n++ {
+		err := math.Abs(a[n] - b[n])
+		if err > max {
+			max = err
+		}
+	}
+	return max
+}
+
+func maxSpectrumAmp(x []complex128) float64 {
+	N := len(x)
+	maxAmp := 0.0
+	for k := 0; k < N; k++ {
+		a := cmplx.Abs(x[k])
+		if a > maxAmp {
+			maxAmp = a
+		}
+	}
+	return maxAmp
+}
+
+func thresholdFilter(x []complex128, thr float64) (Xfilt []complex128, zeroed int) {
+	N := len(x)
+	zeroed = 0
+	Xfilt = make([]complex128, N)
+	copy(Xfilt, x)
+	for k := 0; k < N; k++ {
+		if cmplx.Abs(Xfilt[k]) < thr {
+			Xfilt[k] = 0
+			zeroed++
+		}
+	}
+	return Xfilt, zeroed
+}
+
 func main() {
 	//fmt.Println(xOft(0))
 	//fmt.Println(discretizeOnePeriod(32))
@@ -89,15 +137,24 @@ func main() {
 	// 	fmt.Println(t[0], t[1], t[N-1])
 	// 	fmt.Println(x[0], x[1], x[N-1])
 	// }
+
 	rand.Seed(1)
 	x, _ := discretizeOnePeriod(128)
 	minX, maxX := minmax(x)
 	span := maxX - minX
 	noiseAmp := 0.05 * span
+	N = len(x)
+	alpha := 0.05
+
+	Xnoisy := addNoise(x, noiseAmp)
+	maxAmp := maxSpectrumAmp(Xnoisy)
+
 	// X := dtfReal(x)
-	N := len(x)
-	xNoisy := make([]float64, N)
-	Xfilt := make([]complex128, N)
+	//N := len(x)
+	//xNoisy := make([]float64, N)
+
+	// xNoisy := addNoise(x, noiseAmp)
+	Xfilt, zeroed := thresholdFilter(xNoisy, t)
 	// xRec := idft(X)
 	// maxErr := 0.0
 	for n := 0; n < N; n++ {
@@ -133,7 +190,6 @@ func main() {
 
 	fmt.Println(maxAmp)
 
-	alpha := 0.05
 	thr := alpha * maxAmp
 
 	fmt.Println("Порог равен как", thr)
