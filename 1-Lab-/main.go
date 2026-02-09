@@ -1,10 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"math/cmplx"
 	"math/rand"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
 )
 
 func xOft(t float64) float64 {
@@ -29,14 +31,14 @@ func discretizeOnePeriod(N int) (x []float64, t []float64) { //Дискрети�
 
 }
 
-func dtfReal(x []float64) (X []complex128) { //Дискретное преобразование Фурье X[k] = Σ x[n] * exp(-j*2π*k*n/N)
+func dtfReal(x []float64) (X []complex128) { //ДПФ
 	N := len(x)
 	X = make([]complex128, N)
 	for k := 0; k < N; k++ {
 		var sum complex128 = 0
 		for n := 0; n < N; n++ {
 			angle := -2 * math.Pi * float64(k*n) / float64(N)
-			w := cmplx.Exp(complex(0, angle))
+			w := cmplx.Rect(1, angle)
 			sum += complex(x[n], 0) * w
 		}
 		X[k] = sum
@@ -51,7 +53,7 @@ func idft(X []complex128) (xRec []float64) { //Обратное преобраз
 		sum := complex(0, 0)
 		for k := 0; k < N; k++ {
 			angle := +2 * math.Pi * float64(k*n) / float64(N)
-			w := cmplx.Exp(complex(0, angle))
+			w := cmplx.Rect(1, angle)
 			sum += X[k] * w
 		}
 		sum = sum / complex(float64(N), 0)
@@ -126,102 +128,109 @@ func thresholdFilter(x []complex128, thr float64) (Xfilt []complex128, zeroed in
 	return Xfilt, zeroed
 }
 
-func main() {
-	//fmt.Println(xOft(0))
-	//fmt.Println(discretizeOnePeriod(32))
-	// for _, N := range []int{32, 64, 128} {
-	// 	x, t := discretizeOnePeriod(N)
-	// 	T := 2 * math.Pi
-	// 	dt := T / float64(N)
-	// 	fmt.Println(N, dt)
-	// 	fmt.Println(t[0], t[1], t[N-1])
-	// 	fmt.Println(x[0], x[1], x[N-1])
-	// }
+func xyplotter(t []float64, y []float64) plotter.XYs {
+	pts := make(plotter.XYs, len(t))
+	for i := 0; i < len(pts); i++ {
+		pts[i].X = t[i]
+		pts[i].Y = y[i]
+	}
+	return pts
+}
 
+saveLinePlot(filename, tittle, xlabel, ylabel string, pts plotter.XYs) error{
+	p := plot.New()
+	p.Title.Text = tittle
+	p.X.Label.Text = 
+
+}
+
+func main() {
 	rand.Seed(1)
 	x, _ := discretizeOnePeriod(128)
 	minX, maxX := minmax(x)
 	span := maxX - minX
 	noiseAmp := 0.05 * span
-	N = len(x)
+	//N = len(x)
 	alpha := 0.05
 
+	//Добавляем шума
 	Xnoisy := addNoise(x, noiseAmp)
-	maxAmp := maxSpectrumAmp(Xnoisy)
+	//Спектр от чистой
+	maxAmp := maxSpectrumAmp(dtfReal(x))
 
 	// X := dtfReal(x)
 	//N := len(x)
 	//xNoisy := make([]float64, N)
 
 	// xNoisy := addNoise(x, noiseAmp)
-	Xfilt, zeroed := thresholdFilter(xNoisy, t)
-	// xRec := idft(X)
-	// maxErr := 0.0
-	for n := 0; n < N; n++ {
-		noise := (rand.Float64()*2 - 1) * noiseAmp
-		xNoisy[n] = x[n] + noise
-		// e := math.Abs(x[n] - xRec[n])
-		// if e > maxErr {
-		// 	maxErr = e
-		// }
-	}
+	// Xfilt, zeroed := thresholdFilter(xNoisy, t)
+	// // xRec := idft(X)
+	// // maxErr := 0.0
+	// for n := 0; n < N; n++ {
+	// 	noise := (rand.Float64()*2 - 1) * noiseAmp
+	// 	xNoisy[n] = x[n] + noise
+	// 	// e := math.Abs(x[n] - xRec[n])
+	// 	// if e > maxErr {
+	// 	// 	maxErr = e
+	// 	// }
+	// }
 
-	fmt.Println(minX)
-	fmt.Println(maxX)
-	fmt.Println(span)
-	fmt.Println(noiseAmp)
-	fmt.Println(xNoisy[0])
-	fmt.Println(xNoisy[1])
-	fmt.Println(xNoisy[2])
+	// fmt.Println(minX)
+	// fmt.Println(maxX)
+	// fmt.Println(span)
+	// fmt.Println(noiseAmp)
+	// fmt.Println(xNoisy[0])
+	// fmt.Println(xNoisy[1])
+	// fmt.Println(xNoisy[2])
 
-	Xnoisy := dtfReal(xNoisy)
-	copy(Xfilt, Xnoisy)
-	maxAmp := 0.0
-	// fmt.Println(maxErr)
-	for k := 0; k < N; k++ {
-		a := cmplx.Abs(Xnoisy[k])
-		if a > maxAmp {
-			maxAmp = a
-		}
-		//amp := cmplx.Abs(X[k])
-		A_norm := 2 * cmplx.Abs(Xnoisy[k]) / float64(N)
-		fmt.Println(k, A_norm)
-	}
+	// Xnoisy := dtfReal(xNoisy)
+	// copy(Xfilt, Xnoisy)
+	// maxAmp := 0.0
+	// // fmt.Println(maxErr)
+	// for k := 0; k < N; k++ {
+	// 	a := cmplx.Abs(Xnoisy[k])
+	// 	if a > maxAmp {
+	// 		maxAmp = a
+	// 	}
+	// 	//amp := cmplx.Abs(X[k])
+	// 	A_norm := 2 * cmplx.Abs(Xnoisy[k]) / float64(N)
+	// 	fmt.Println(k, A_norm)
+	// }
 
-	fmt.Println(maxAmp)
+	// fmt.Println(maxAmp)
 
-	thr := alpha * maxAmp
+	// thr := alpha * maxAmp
 
-	fmt.Println("Порог равен как", thr)
+	// fmt.Println("Порог равен как", thr)
 
-	count := 0
-	for k := 0; k < N; k++ {
-		a := cmplx.Abs(Xfilt[k])
-		if a < thr {
-			Xfilt[k] = 0
-			count++
-		}
-	}
+	// count := 0
+	// for k := 0; k < N; k++ {
+	// 	a := cmplx.Abs(Xfilt[k])
+	// 	if a < thr {
+	// 		Xfilt[k] = 0
+	// 		count++
+	// 	}
+	// }
 
-	fmt.Println("Счетчик Zeroed", count)
+	// fmt.Println("Счетчик Zeroed", count)
 
-	maxErrNoisy := 0.0
-	for n := 0; n < N; n++ {
-		e := math.Abs(x[n] - xNoisy[n])
-		if e > float64(maxErrNoisy) {
-			maxErrNoisy = e
-		}
-	}
+	// maxErrNoisy := 0.0
+	// for n := 0; n < N; n++ {
+	// 	e := math.Abs(x[n] - xNoisy[n])
+	// 	if e > float64(maxErrNoisy) {
+	// 		maxErrNoisy = e
+	// 	}
+	// }
 
-	xFilt := idft(Xfilt)
+	// xFilt := idft(Xfilt)
 
-	maxErrFilt := 0.0
-	for n := 0; n < N; n++ {
-		e := math.Abs(x[n] - xFilt[n])
-		if e > float64(maxErrFilt) {
-			maxErrFilt = e
-		}
+	// maxErrFilt := 0.0
+	// for n := 0; n < N; n++ {
+	// 	e := math.Abs(x[n] - xFilt[n])
+	// 	if e > float64(maxErrFilt) {
+	// 		maxErrFilt = e
+	// 	}
 
-	}
+	// }
 
 }
