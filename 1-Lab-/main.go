@@ -7,6 +7,7 @@ import (
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 )
 
 func xOft(t float64) float64 {
@@ -137,26 +138,38 @@ func xyplotter(t []float64, y []float64) plotter.XYs {
 	return pts
 }
 
-saveLinePlot(filename, tittle, xlabel, ylabel string, pts plotter.XYs) error{
+func saveLinePlot(filename, tittle, xlabel, ylabel string, pts plotter.XYs) error {
 	p := plot.New()
 	p.Title.Text = tittle
-	p.X.Label.Text = 
+	p.X.Label.Text = xlabel
+	p.Y.Label.Text = ylabel
+	line, err := plotter.NewLine(pts)
+	if err != nil {
+		panic(err)
+	}
+	p.Add(line)
+	return p.Save(6*vg.Inch, 3*vg.Inch, filename)
 
 }
 
 func main() {
 	rand.Seed(1)
-	x, _ := discretizeOnePeriod(128)
-	minX, maxX := minmax(x)
-	span := maxX - minX
-	noiseAmp := 0.05 * span
-	//N = len(x)
-	alpha := 0.05
+	x, t := discretizeOnePeriod(32)
+	pts := xyplotter(t, x)
+	err := saveLinePlot("x_clean_32.png", "x(t), N=128", "t", "x", pts)
+	if err != nil {
+		panic(err)
+	}
+	// minX, maxX := minmax(x)
+	// span := maxX - minX
+	// noiseAmp := 0.05 * span
+	// //N = len(x)
+	// alpha := 0.05
 
 	//Добавляем шума
-	Xnoisy := addNoise(x, noiseAmp)
-	//Спектр от чистой
-	maxAmp := maxSpectrumAmp(dtfReal(x))
+	// xNoisy := addNoise(x, noiseAmp)
+	// //Спектр от чистой
+	// maxAmp := maxSpectrumAmp(dtfReal(x))
 
 	// X := dtfReal(x)
 	//N := len(x)
