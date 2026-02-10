@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/cmplx"
 	"math/rand"
+	"strconv"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
@@ -180,7 +181,8 @@ func xyFromSpectrum(A []float64) (pts plotter.XYs) {
 
 func main() {
 	rand.Seed(1)
-	x, t := discretizeOnePeriod(32)
+	N := 128
+	x, t := discretizeOnePeriod(N)
 	minX, maxX := minmax(x)
 	span := maxX - minX
 	noiseAmp := 0.05 * span
@@ -190,11 +192,11 @@ func main() {
 	xNoisy := addNoise(x, noiseAmp)
 	ptsNoisy := xyplotter(t, xNoisy)
 	pts := xyplotter(t, x)
-	err := saveLinePlot("x_clean_32.png", "x(t), N=32", "t", "x", pts)
+	err := saveLinePlot("x_clean_"+strconv.Itoa(N)+".png", "x(t), N="+strconv.Itoa(N), "t", "x", pts)
 	if err != nil {
 		panic(err)
 	}
-	err = saveLinePlot("x_noisy_32.png", "x(t), N=32", "t", "x", ptsNoisy)
+	err = saveLinePlot("x_noisy_"+strconv.Itoa(N)+".png", "x(t), N="+strconv.Itoa(N), "t", "x", ptsNoisy)
 	if err != nil {
 		panic(err)
 	}
@@ -203,7 +205,7 @@ func main() {
 	clean_X := dtfReal(x)
 	A := ampSpectrumNormalized(clean_X)
 	ptsA := xyFromSpectrum(A)
-	err = saveLinePlot("A_spectrum_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA)
+	err = saveLinePlot("A_spectrum_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA)
 	if err != nil {
 		panic(err)
 	}
@@ -212,7 +214,7 @@ func main() {
 	Xnoisy := dtfReal(xNoisy)
 	A_noisy := ampSpectrumNormalized(Xnoisy)
 	ptsA_noisy := xyFromSpectrum(A_noisy)
-	err = saveLinePlot("A_spectrum_noisy_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA_noisy)
+	err = saveLinePlot("A_spectrum_noisy_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA_noisy)
 	if err != nil {
 		panic(err)
 	}
@@ -221,7 +223,7 @@ func main() {
 	Xfilt, _ := thresholdFilter(Xnoisy, thr)
 	A_filt := ampSpectrumNormalized(Xfilt)
 	ptsA_filt := xyFromSpectrum(A_filt)
-	err = saveLinePlot("A_spectrum_filt_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA_filt)
+	err = saveLinePlot("A_spectrum_filt_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA_filt)
 	if err != nil {
 		panic(err)
 	}
