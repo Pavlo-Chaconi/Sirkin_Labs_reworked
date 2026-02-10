@@ -152,14 +152,80 @@ func saveLinePlot(filename, tittle, xlabel, ylabel string, pts plotter.XYs) erro
 
 }
 
+func ampSpectrumNormalized(X []complex128) (A []float64) {
+	N := len(X)
+	A = make([]float64, N)
+	for k := 0; k < N; k++ {
+		amp := cmplx.Abs(X[k])
+		if k == 0 || k == N/2 {
+			A[k] = amp / float64(N)
+		} else {
+			A[k] = 2 * amp / float64(N)
+		}
+	}
+	return
+}
+
+func xyFromSpectrum(A []float64) (pts plotter.XYs) {
+	// Обычно для реального сигнала строят односторонний спектр: k=0..N/2
+	N := len(A)
+	half := N/2 + 1
+	pts = make(plotter.XYs, half)
+	for k := 0; k < half; k++ {
+		pts[k].X = float64(k)
+		pts[k].Y = A[k]
+	}
+	return pts
+}
+
 func main() {
 	rand.Seed(1)
 	x, t := discretizeOnePeriod(32)
+	minX, maxX := minmax(x)
+	span := maxX - minX
+	noiseAmp := 0.05 * span
+	alpha := 0.05
+	maxAmp := maxSpectrumAmp(dtfReal(x))
+	thr := alpha * maxAmp
+	xNoisy := addNoise(x, noiseAmp)
+	ptsNoisy := xyplotter(t, xNoisy)
 	pts := xyplotter(t, x)
-	err := saveLinePlot("x_clean_32.png", "x(t), N=128", "t", "x", pts)
+	err := saveLinePlot("x_clean_32.png", "x(t), N=32", "t", "x", pts)
 	if err != nil {
 		panic(err)
 	}
+	err = saveLinePlot("x_noisy_32.png", "x(t), N=32", "t", "x", ptsNoisy)
+	if err != nil {
+		panic(err)
+	}
+
+	// Амплитудный спектр A[k] для чистого сигнала
+	clean_X := dtfReal(x)
+	A := ampSpectrumNormalized(clean_X)
+	ptsA := xyFromSpectrum(A)
+	err = saveLinePlot("A_spectrum_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA)
+	if err != nil {
+		panic(err)
+	}
+
+	// Амплитудный спектр A[k] для зашумленного сигнала
+	Xnoisy := dtfReal(xNoisy)
+	A_noisy := ampSpectrumNormalized(Xnoisy)
+	ptsA_noisy := xyFromSpectrum(A_noisy)
+	err = saveLinePlot("A_spectrum_noisy_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA_noisy)
+	if err != nil {
+		panic(err)
+	}
+
+	//Амплитудный спектр A[k] для зашумленного сигнала после фильтрации
+	Xfilt, _ := thresholdFilter(Xnoisy, thr)
+	A_filt := ampSpectrumNormalized(Xfilt)
+	ptsA_filt := xyFromSpectrum(A_filt)
+	err = saveLinePlot("A_spectrum_filt_32.png", "Амплитудный спектр A[k], N=32", "k", "A[k]", ptsA_filt)
+	if err != nil {
+		panic(err)
+	}
+
 	// minX, maxX := minmax(x)
 	// span := maxX - minX
 	// noiseAmp := 0.05 * span
