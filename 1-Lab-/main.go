@@ -20,7 +20,7 @@ func discretizeOnePeriod(N int) (x []float64, t []float64) { //Дискрети�
 		return
 	}
 
-	T := 2 * math.Pi
+	T := 4 * math.Pi
 	dt := T / float64(N)
 	x = make([]float64, N)
 	t = make([]float64, N)
@@ -153,6 +153,15 @@ func saveLinePlot(filename, tittle, xlabel, ylabel string, pts plotter.XYs) erro
 
 }
 
+func errorSignal(a, b []float64) []float64 {
+	N := len(a)
+	err := make([]float64, N)
+	for n := 0; n < N; n++ {
+		err[n] = math.Abs(a[n] - b[n])
+	}
+	return err
+}
+
 func ampSpectrumNormalized(X []complex128) (A []float64) {
 	N := len(X)
 	A = make([]float64, N)
@@ -168,7 +177,6 @@ func ampSpectrumNormalized(X []complex128) (A []float64) {
 }
 
 func xyFromSpectrum(A []float64) (pts plotter.XYs) {
-	// Обычно для реального сигнала строят односторонний спектр: k=0..N/2
 	N := len(A)
 	half := N/2 + 1
 	pts = make(plotter.XYs, half)
@@ -177,6 +185,43 @@ func xyFromSpectrum(A []float64) (pts plotter.XYs) {
 		pts[k].Y = A[k]
 	}
 	return pts
+}
+
+func saveBarSpectrum(filename, title, xlabel, ylabel string, A []float64) error {
+	p := plot.New()
+	p.Title.Text = title
+	p.X.Label.Text = xlabel
+	p.Y.Label.Text = ylabel
+
+	N := len(A)
+	half := N/2 + 1
+	values := make(plotter.Values, half)
+	labels := make([]string, half)
+
+	step := 1
+	if half > 20 {
+		step = 2
+	}
+
+	for k := 0; k < half; k++ {
+		values[k] = A[k]
+		if k%step == 0 {
+			labels[k] = strconv.Itoa(k)
+		} else {
+			labels[k] = ""
+		}
+	}
+
+	bar, err := plotter.NewBarChart(values, vg.Points(4))
+	if err != nil {
+		return err
+	}
+
+	bar.Offset = -bar.Width / 2
+	p.Add(bar)
+	p.NominalX(labels...)
+
+	return p.Save(10*vg.Inch, 4*vg.Inch, filename)
 }
 
 func main() {
@@ -204,8 +249,20 @@ func main() {
 	// Амплитудный спектр A[k] для чистого сигнала
 	clean_X := dtfReal(x)
 	A := ampSpectrumNormalized(clean_X)
-	ptsA := xyFromSpectrum(A)
-	err = saveLinePlot("A_spectrum_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA)
+	err = saveBarSpectrum("A_spectrum_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", A)
+	if err != nil {
+		panic(err)
+	}
+
+	//Обратное преобразование Фурье для чистого сигнала
+	reverseX := idft(clean_X)
+	err = saveLinePlot("reverseX_"+strconv.Itoa(N)+".png", "reverseX(t), N="+strconv.Itoa(N), "t", "x", xyplotter(t, reverseX))
+	if err != nil {
+		panic(err)
+	}
+	// График ошибки восстановления чистого сигнала
+	errClean := errorSignal(x, reverseX)
+	err = saveLinePlot("error_clean_"+strconv.Itoa(N)+".png", "Ошибка восстановления чистого сигнала, N="+strconv.Itoa(N), "t", "|x(t)-x_rec(t)|", xyplotter(t, errClean))
 	if err != nil {
 		panic(err)
 	}
@@ -213,8 +270,7 @@ func main() {
 	// Амплитудный спектр A[k] для зашумленного сигнала
 	Xnoisy := dtfReal(xNoisy)
 	A_noisy := ampSpectrumNormalized(Xnoisy)
-	ptsA_noisy := xyFromSpectrum(A_noisy)
-	err = saveLinePlot("A_spectrum_noisy_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA_noisy)
+	err = saveBarSpectrum("A_spectrum_noisy_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", A_noisy)
 	if err != nil {
 		panic(err)
 	}
@@ -222,8 +278,18 @@ func main() {
 	//Амплитудный спектр A[k] для зашумленного сигнала после фильтрации
 	Xfilt, _ := thresholdFilter(Xnoisy, thr)
 	A_filt := ampSpectrumNormalized(Xfilt)
-	ptsA_filt := xyFromSpectrum(A_filt)
-	err = saveLinePlot("A_spectrum_filt_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", ptsA_filt)
+	err = saveBarSpectrum("A_spectrum_filt_"+strconv.Itoa(N)+".png", "Амплитудный спектр A[k], N="+strconv.Itoa(N), "k", "A[k]", A_filt)
+	if err != nil {
+		panic(err)
+	}
+	// Временной сигнал после фильтрации и график ошибки
+	xFilt := idft(Xfilt)
+	errFilt := errorSignal(x, xFilt)
+	err = saveLinePlot("x_filt_"+strconv.Itoa(N)+".png", "x_filt(t), N="+strconv.Itoa(N), "t", "x", xyplotter(t, xFilt))
+	if err != nil {
+		panic(err)
+	}
+	err = saveLinePlot("error_filt_"+strconv.Itoa(N)+".png", "Ошибка после фильтрации, N="+strconv.Itoa(N), "t", "|x(t)-x_filt(t)|", xyplotter(t, errFilt))
 	if err != nil {
 		panic(err)
 	}
