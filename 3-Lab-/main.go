@@ -10,12 +10,10 @@ import (
 	"gonum.org/v1/plot/vg"
 )
 
-// Исходная функция (Вариант 6)
 func signal(t float64) float64 {
 	return math.Cos(t) * math.Cos(math.Abs(math.Sin(t)))
 }
 
-// Метод для перерасчета времени (Шаг 11 / стр. 6)
 func getNewTime(newIndex int, newDt float64) float64 {
 	return float64(newIndex) * newDt
 }
@@ -30,7 +28,6 @@ func main() {
 	origY := make([]float64, N)
 	origPts := make(plotter.XYs, N)
 
-	// Шаг 2: Расчет исходного сигнала
 	for i := 0; i < N; i++ {
 		origT[i] = float64(i) * dt
 		origY[i] = signal(origT[i])
@@ -38,17 +35,14 @@ func main() {
 		origPts[i].Y = origY[i]
 	}
 
-	// Шаг 4: Увеличиваем частоту на 20%
 	newDt := dt / 1.2
 	var resampledPts plotter.XYs
 	newIndex := 0
 
-	// Шаг 10: Основной цикл со сдвигом окна
 	for i := 0; i < N-3; i++ {
 		t0, t1, t2, t3 := origT[i], origT[i+1], origT[i+2], origT[i+3]
 		y0, y1, y2, y3 := origY[i], origY[i+1], origY[i+2], origY[i+3]
 
-		// Шаг 8: Коэффициенты фильтра Фарроу
 		a3 := (y3-y0)/6.0 + (y1-y2)/2.0
 		a1 := (y3-y1)/2.0 - a3
 		a2 := (y3 - y2) - a1 - a3
@@ -73,11 +67,6 @@ func main() {
 		}
 	}
 
-	// ==========================================
-	// БЛОК ПОСТРОЕНИЯ ГРАФИКОВ
-	// ==========================================
-
-	// 1. График исходного сигнала
 	p1 := plot.New()
 	p1.Title.Text = "Шаг 2: Исходный сигнал (200 отсчетов)"
 	p1.X.Label.Text = "Время t (с)"
@@ -93,7 +82,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 2. График передискретизированного сигнала
 	p2 := plot.New()
 	p2.Title.Text = "Шаг 4-9: Передискретизированный сигнал (+20%)"
 	p2.X.Label.Text = "Время t (с)"
@@ -113,7 +101,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 3. Совмещенный график (сравнение)
 	p3 := plot.New()
 	p3.Title.Text = "Сравнение: Исходный сигнал vs Ресэмплинг"
 	p3.X.Label.Text = "Время t (с)"
